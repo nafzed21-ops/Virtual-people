@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="screen-orientation" content="landscape" />
+<title>Isle Tribe</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Nunito:wght@500;700;800&display=swap');
+
+:root {
+  --jungle: #1F3A2E;
+  --jungle-dark: #142720;
+  --sand: #EFE4C8;
+  --sand-deep: #DCC99C;
+  --ochre: #D8A13A;
+  --driftwood: #6B4A34;
+  --teal: #2C6E6B;
+  --coral: #C1502E;
+  --ink: #24301F;
+  --paper: #FBF6E8;
+  --shadow: rgba(20, 30, 20, 0.35);
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Nunito', sans-serif;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background: var(--jungle-dark);
+  color: var(--ink);
+  font-family: var(--font-body);
+  touch-action: manipulation;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--jungle-dark);
+}
+
+/* ---------- TOP BAR ---------- */
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: env(safe-area-inset-top, 10px) 12px 10px;
+  background: linear-gradient(180deg, var(--jungle) 0%, #24402f 100%);
+  border-bottom: 3px solid var(--jungle-dark);
+  z-index: 30;
+}
+
+.resource {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0,0,0,0.18);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-weight: 800;
+  color: var(--sand);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.res-icon { font-size: 15px; }
+
+.icon-btn {
+  margin-left: auto;
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.2);
+  color: var(--sand);
+  font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+}
+#btn-menu { margin-left: 4px; }
+.icon-btn:active { background: rgba(0,0,0,0.35); }
+
+/* ---------- VILLAGE VIEW ---------- */
+#village {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  background: var(--teal);
+}
+#village-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+#villager-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.villager {
+  position: absolute;
+  width: 34px;
+  height: 34px;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: left 0.9s linear, top 0.9s linear;
+  filter: drop-shadow(0 3px 2px var(--shadow));
+}
+.villager.selected .villager-ring { opacity: 1; }
+.villager-svg { width: 100%; height: 100%; }
+.villager-ring {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.villager-label {
+  position: absolute;
+  top: -16px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--paper);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+  white-space: nowrap;
+}
+.villager .need-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  font-size: 12px;
+}
+
+.building-marker {
+  cursor: pointer;
+}
+
+/* ---------- FLOATERS (+food, +wood popups) ---------- */
+#floaters {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 15;
+}
+.floater {
+  position: absolute;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--sand);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  animation: floatUp 1.2s ease-out forwards;
+  transform: translate(-50%, -50%);
+}
+@keyframes floatUp {
+  0% { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, -140%); }
+}
+
+/* ---------- VILLAGER PANEL (bottom sheet) ---------- */
+#villager-panel {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  background: var(--paper);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -6px 20px rgba(0,0,0,0.35);
+  padding: 6px 18px 18px;
+  max-height: 62%;
+  overflow-y: auto;
+  transform: translateY(0);
+  transition: transform 0.25s ease;
+  z-index: 25;
+}
+#villager-panel.hidden { transform: translateY(105%); }
+.panel-handle {
+  width: 40px; height: 4px;
+  background: var(--sand-deep);
+  border-radius: 4px;
+  margin: 8px auto 4px;
+}
+#vp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+#vp-name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--jungle);
+}
+#vp-needs {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.need {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 70px;
+}
+.need-label { font-size: 11px; font-weight: 700; color: var(--driftwood); }
+.need-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--sand-deep);
+  overflow: hidden;
+}
+.need-fill { height: 100%; border-radius: 4px; }
+.need-fill.hunger { background: var(--ochre); }
+.need-fill.energy { background: var(--teal); }
+.need-fill.health { background: var(--coral); }
+
+#vp-skills {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.skill-chip {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--sand);
+  color: var(--jungle);
+  padding: 3px 9px;
+  border-radius: 999px;
+}
+.vp-hint { font-size: 12px; color: var(--driftwood); margin-bottom: 8px; font-weight: 700; }
+
+#vp-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.task-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid var(--sand-deep);
+  background: #fff;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.task-btn:active { background: var(--sand); }
+.task-btn.disabled { opacity: 0.45; pointer-events: none; }
+.task-icon { font-size: 18px; }
+.task-sub { font-size: 11px; font-weight: 600; color: var(--driftwood); margin-left: auto; }
+
+/* ---------- LOG ---------- */
+#log {
+  position: absolute;
+  top: 66px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  z-index: 20;
+}
+.log-line {
+  align-self: flex-start;
+  background: rgba(20, 30, 20, 0.72);
+  color: var(--sand);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 8px;
+  animation: logFade 4.5s ease forwards;
+  max-width: 80%;
+}
+@keyframes logFade {
+  0% { opacity: 0; transform: translateY(-4px); }
+  10% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ---------- MODALS ---------- */
+.modal {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 16, 12, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  padding: 20px;
+}
+.modal.hidden { display: none; }
+.modal-card {
+  background: var(--paper);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 420px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 8px;
+}
+.modal-header h2 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin: 0;
+  color: var(--jungle);
+}
+.modal-body {
+  padding: 4px 18px 20px;
+  overflow-y: auto;
+}
+.modal-body p {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.menu-btn {
+  display: block;
+  width: 100%;
+  padding: 13px;
+  margin-bottom: 10px;
+  border: none;
+  border-radius: 12px;
+  background: var(--jungle);
+  color: var(--sand);
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+}
+.menu-btn.danger { background: var(--coral); }
+.menu-note { font-size: 12px; color: var(--driftwood); text-align: center; margin-top: 4px; }
+
+.tech-item {
+  border: 2px solid var(--sand-deep);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.tech-item.done { opacity: 0.55; }
+.tech-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.tech-name { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--jungle); }
+.tech-cost { font-size: 12px; font-weight: 700; color: var(--driftwood); }
+.tech-desc { font-size: 12px; color: var(--ink); margin-bottom: 8px; }
+.tech-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--ochre);
+  color: var(--jungle-dark);
+  font-weight: 800;
+  font-size: 12px;
+  cursor: pointer;
+}
+.tech-btn.disabled { background: var(--sand-deep); color: var(--driftwood); pointer-events: none; }
+
+#btn-start {
+  background: var(--ochre);
+  color: var(--jungle-dark);
+}
+
+@media (min-width: 700px) {
+  .modal-card { max-width: 480px; }
+}
+
+/* ---------- ROTATE PROMPT (portrait only) ---------- */
+#rotate-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--jungle-dark);
+  color: var(--sand);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  padding: 30px;
+}
+.rotate-icon {
+  font-size: 54px;
+  animation: rotateHint 1.6s ease-in-out infinite;
+}
+.rotate-text {
+  font-family: var(--font-display);
+  font-size: 19px;
+  max-width: 280px;
+  line-height: 1.4;
+}
+@keyframes rotateHint {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(90deg); }
+}
+@media (orientation: portrait) and (max-width: 900px) {
+  #rotate-overlay { display: flex; }
+  #app { visibility: hidden; }
+}
+
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOP BAR: resources -->
+  <header id="topbar">
+    <div class="resource" data-res="food">
+      <span class="res-icon">🍇</span><span class="res-val" id="val-food">0</span>
+    </div>
+    <div class="resource" data-res="wood">
+      <span class="res-icon">🪵</span><span class="res-val" id="val-wood">0</span>
+    </div>
+    <div class="resource" data-res="knowledge">
+      <span class="res-icon">📜</span><span class="res-val" id="val-knowledge">0</span>
+    </div>
+    <div class="resource" data-res="pop">
+      <span class="res-icon">🧍</span><span class="res-val" id="val-pop">0</span>/<span id="val-cap">0</span>
+    </div>
+    <button id="btn-tech" class="icon-btn" title="Tech Tree">🧭</button>
+    <button id="btn-menu" class="icon-btn" title="Menu">☰</button>
+  </header>
+
+  <!-- MAIN VILLAGE VIEW -->
+  <main id="village">
+    <svg id="village-svg" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid slice"></svg>
+    <div id="villager-layer"></div>
+    <div id="floaters"></div>
+  </main>
+
+  <!-- SELECTED VILLAGER PANEL -->
+  <section id="villager-panel" class="hidden">
+    <div class="panel-handle"></div>
+    <div id="vp-header">
+      <div id="vp-name">—</div>
+      <button id="vp-close" class="icon-btn">✕</button>
+    </div>
+    <div id="vp-needs"></div>
+    <div id="vp-skills"></div>
+    <div id="vp-actions">
+      <div class="vp-hint">Tap a task below to assign</div>
+      <div id="vp-task-list"></div>
+    </div>
+  </section>
+
+  <!-- LOG -->
+  <div id="log"></div>
+
+  <!-- TECH TREE MODAL -->
+  <div id="modal-tech" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header"><h2>Ancient Knowledge</h2><button class="icon-btn modal-close" data-modal="modal-tech">✕</button></div>
+      <div id="tech-list" class="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- MENU MODAL -->
+  <div id="modal-menu" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header"><h2>Isle Tribe</h2><button class="icon-btn modal-close" data-modal="modal-menu">✕</button></div>
+      <div class="modal-body">
+        <button class="menu-btn" id="btn-save">Save Progress</button>
+        <button class="menu-btn" id="btn-import">Import Save File</button>
+        <button class="menu-btn" id="btn-export">Export Save File</button>
+        <button class="menu-btn danger" id="btn-reset">Start New Tribe</button>
+        <input type="file" id="file-import" accept=".json" hidden />
+        <p class="menu-note">Progress also autosaves on this device every few seconds.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- HIDDEN: not linked from any visible button. Reached only by the
+       tap gesture on the population counter (see game.js). -->
+  <div id="modal-cheat" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-header"><h2>Founder's Console</h2><button class="icon-btn modal-close" data-modal="modal-cheat">✕</button></div>
+      <div class="modal-body">
+        <button class="menu-btn" data-cheat="food500">+500 Food</button>
+        <button class="menu-btn" data-cheat="wood500">+500 Wood</button>
+        <button class="menu-btn" data-cheat="know500">+500 Knowledge</button>
+        <button class="menu-btn" data-cheat="hut">+1 Hut (instant, free)</button>
+        <button class="menu-btn" data-cheat="finishbuild">Finish current build instantly</button>
+        <button class="menu-btn" data-cheat="alltech">Unlock all tech</button>
+        <button class="menu-btn" data-cheat="healall">Fully heal &amp; feed everyone</button>
+        <p class="menu-note">Only visible to whoever knows the gesture.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- FIRST RUN / WELCOME -->
+  <div id="modal-welcome" class="modal">
+    <div class="modal-card">
+      <div class="modal-header"><h2>Welcome to the Isle</h2></div>
+      <div class="modal-body">
+        <p>A small tribe has washed ashore. Tap a villager, then tap a task to put them to work. Keep them fed, growing, and learning — and watch the tribe grow.</p>
+        <button class="menu-btn" id="btn-start">Begin</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROTATE PROMPT: shown only in portrait, via CSS media query -->
+  <div id="rotate-overlay">
+    <div class="rotate-icon">📱</div>
+    <div class="rotate-text">Turn your device sideways to play Isle Tribe</div>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   ISLE TRIBE — an original village-simulation game
+   Inspired by the "auto-working villager" genre. All code,
+   art (SVG/CSS), names and data formats here are original.
+   ============================================================ */
+
+(function () {
+  "use strict";
+
+  const SAVE_KEY = "isletribe_save_v1";
+  const TICK_MS = 1000;
+  const WORLD_W = 1200; // widescreen landscape world
+  const WORLD_H = 720;
+
+  // ---------- LOCATIONS ----------
+  // Fixed points on the island where villagers can be assigned to work.
+  const LOCATIONS = {
+    farm:     { id: "farm",     name: "Farm Plot",     x: 260, y: 560, icon: "🌾", res: "food",  baseRate: 2, skill: "farming",    built: true  },
+    forest:   { id: "forest",   name: "Forest Edge",   x: 1000, y: 180, icon: "🌳", res: "wood",  baseRate: 2, skill: "woodcutting", built: true  },
+    builder:  { id: "builder",  name: "Builder's Yard",x: 600, y: 640, icon: "🔨", res: null,    baseRate: 0, skill: "building",    built: true  },
+    school:   { id: "school",   name: "School Circle", x: 900, y: 540, icon: "📚", res: "knowledge", baseRate: 1, skill: "science", built: false },
+    nursery:  { id: "nursery",  name: "Nursery Grove", x: 330, y: 170, icon: "🌺", res: null,    baseRate: 0, skill: null,          built: false },
+    rest:     { id: "rest",     name: "Hammocks",      x: 1030, y: 610, icon: "🛌", res: null,    baseRate: 0, skill: null,          built: true  },
+  };
+
+  const TECHS = [
+    { id: "irrigation", name: "Irrigation Channels", cost: 20, desc: "Farm plots yield 50% more food.", done: false },
+    { id: "tools",      name: "Sharpened Tools",     cost: 15, desc: "Wood gathering yields 50% more.", done: false },
+    { id: "masonry",    name: "Masonry",             cost: 30, desc: "Huts grant +1 extra housing each.", done: false },
+    { id: "medicine",   name: "Herbal Medicine",     cost: 25, desc: "Villagers recover health faster and resist illness.", done: false },
+    { id: "family",     name: "Family Traditions",   cost: 20, desc: "Unlocks the Nursery Grove for breeding.", done: false },
+    { id: "focus",      name: "Scholarly Focus",     cost: 40, desc: "Knowledge generation increased 50%.", done: false },
+  ];
+
+  const NAMES = ["Tama","Noa","Kira","Milo","Suri","Ezo","Vana","Roka","Ila","Poe","Tavo","Nia","Kael","Moa","Ura","Sela"];
+
+  // ---------- STATE ----------
+  let state = null;
+  let selectedVillagerId = null;
+  let tickHandle = null;
+  let dayTicks = 0;
+
+  function freshState() {
+    const villagers = [];
+    for (let i = 0; i < 4; i++) villagers.push(makeVillager());
+    return {
+      resources: { food: 20, wood: 20, knowledge: 0 },
+      huts: 1,               // starting housing
+      buildings: { school: false, nursery: false },
+      tech: TECHS.map(t => ({ id: t.id, done: false })),
+      villagers,
+      builderJob: null,      // { type, remaining, cost }
+      log: [],
+      createdAt: Date.now(),
+    };
+  }
+
+  function makeVillager(child) {
+    return {
+      id: "v" + Math.random().toString(36).slice(2, 9),
+      name: NAMES[Math.floor(Math.random() * NAMES.length)],
+      x: 600 + (Math.random() * 100 - 50),
+      y: 360 + (Math.random() * 100 - 50),
+      hunger: 80,
+      energy: 80,
+      health: 100,
+      isChild: !!child,
+      growTicks: child ? 45 : 0,
+      skills: { farming: 1, woodcutting: 1, science: 1, building: 1 },
+      task: null,          // location id or null
+      taskTicks: 0,
+    };
+  }
+
+  // ---------- CAPACITY ----------
+  function popCap() {
+    const masonry = isTechDone("masonry");
+    const perHut = masonry ? 3 : 2;
+    return 2 + state.huts * perHut; // 2 base + huts
+  }
+  function isTechDone(id) {
+    const t = state.tech.find(t => t.id === id);
+    return t && t.done;
+  }
+  function techMult(id, amt) {
+    return isTechDone(id) ? amt * 1.5 : amt;
+  }
+
+  // ---------- LOGGING ----------
+  function log(msg) {
+    const el = document.createElement("div");
+    el.className = "log-line";
+    el.textContent = msg;
+    const logBox = document.getElementById("log");
+    logBox.appendChild(el);
+    setTimeout(() => el.remove(), 4600);
+    state.log.push({ t: Date.now(), msg });
+    if (state.log.length > 50) state.log.shift();
+  }
+
+  function floatText(x, y, text) {
+    const f = document.createElement("div");
+    f.className = "floater";
+    f.textContent = text;
+    f.style.left = (x / WORLD_W) * 100 + "%";
+    f.style.top = (y / WORLD_H) * 100 + "%";
+    document.getElementById("floaters").appendChild(f);
+    setTimeout(() => f.remove(), 1300);
+  }
+
+  // ---------- GAME TICK ----------
+  function tick() {
+    dayTicks++;
+    let population = state.villagers.length;
+
+    // Daily food consumption every 20 ticks — meals restore hunger
+    if (dayTicks % 20 === 0) {
+      const need = population;
+      if (state.resources.food >= need) {
+        state.resources.food -= need;
+        for (const v of state.villagers) v.hunger = Math.min(100, v.hunger + 55);
+      } else {
+        // partial meal: everyone gets some, food runs out
+        const fraction = need > 0 ? state.resources.food / need : 0;
+        state.resources.food = 0;
+        for (const v of state.villagers) v.hunger = Math.min(100, v.hunger + 55 * fraction);
+        log("The tribe goes hungry — not enough food for everyone!");
+      }
+    }
+
+    // Per-villager updates
+    for (const v of state.villagers.slice()) {
+      // growth
+      if (v.isChild) {
+        v.growTicks--;
+        if (v.growTicks <= 0) {
+          v.isChild = false;
+          log(v.name + " has grown into an adult.");
+        }
+        v.hunger = Math.max(0, v.hunger - 0.4);
+        v.energy = Math.min(100, v.energy + 0.6);
+        continue;
+      }
+
+      const working = !!v.task && v.task !== "rest";
+      v.hunger = Math.max(0, v.hunger - (working ? 0.8 : 0.5));
+      v.energy = Math.max(0, v.energy - (working ? 1.1 : -1.6));
+      v.energy = Math.min(100, v.energy);
+
+      if (v.hunger <= 0 || v.energy <= 0) {
+        v.health -= 2;
+      } else if (v.health < 100) {
+        v.health += isTechDone("medicine") ? 1.2 : 0.4;
+      }
+
+      // random illness (rare, reduced by medicine tech)
+      if (!isTechDone("medicine") && Math.random() < 0.0025) {
+        v.health -= 20;
+        log(v.name + " has fallen ill.");
+      }
+
+      v.health = Math.max(0, Math.min(100, v.health));
+
+      if (v.health <= 0) {
+        log(v.name + " has passed away.");
+        removeVillager(v.id);
+        continue;
+      }
+
+      // auto unassign if exhausted
+      if (v.task && v.task !== "rest" && (v.hunger <= 5 || v.energy <= 5)) {
+        assignTask(v.id, "rest", true);
+        continue;
+      }
+
+      runTask(v);
+    }
+
+    // builder job progress
+    if (state.builderJob) {
+      const worker = state.villagers.find(v => v.task === "builder" && !v.isChild);
+      if (worker) {
+        const rate = 1 + worker.skills.building * 0.15;
+        state.builderJob.remaining -= rate;
+        if (state.builderJob.remaining <= 0) {
+          completeBuilderJob();
+        }
+      }
+    }
+
+    // nursery breeding
+    const nurseryPair = state.villagers.filter(v => v.task === "nursery" && !v.isChild);
+    if (nurseryPair.length >= 2) {
+      const [a, b] = nurseryPair;
+      a.nurseryTicks = (a.nurseryTicks || 0) + 1;
+      if (a.hunger > 30 && a.energy > 30 && b.hunger > 30 && b.energy > 30) {
+        if (a.nurseryTicks >= 18) {
+          if (state.villagers.length < popCap()) {
+            const child = makeVillager(true);
+            child.x = LOCATIONS.nursery.x;
+            child.y = LOCATIONS.nursery.y;
+            state.villagers.push(child);
+            log("A new villager, " + child.name + ", was born!");
+            a.nurseryTicks = 0;
+            assignTask(a.id, null);
+            assignTask(b.id, null);
+          } else {
+            log("The nursery is full — no housing for a new villager.");
+            a.nurseryTicks = 0;
+          }
+        }
+      }
+    }
+
+    saveState(true);
+    render();
+  }
+
+  function runTask(v) {
+    if (!v.task) return;
+    const loc = LOCATIONS[v.task];
+    if (!loc || !loc.res) return; // builder/nursery/rest handled elsewhere
+    v.taskTicks++;
+    const skillLevel = v.skills[loc.skill] || 1;
+    const interval = Math.max(1, 3 - Math.floor(skillLevel / 3)); // higher skill = faster
+    if (v.taskTicks >= interval) {
+      v.taskTicks = 0;
+      let amt = loc.baseRate + Math.floor(skillLevel / 2);
+      if (loc.res === "food") amt = techMult("irrigation", amt);
+      if (loc.res === "wood") amt = techMult("tools", amt);
+      if (loc.res === "knowledge") amt = techMult("focus", amt);
+      amt = Math.round(amt);
+      state.resources[loc.res] += amt;
+      floatText(loc.x, loc.y, "+" + amt + (loc.res === "food" ? "🍇" : loc.res === "wood" ? "🪵" : "📜"));
+      // skill grows slowly with practice
+      if (Math.random() < 0.08) v.skills[loc.skill] = Math.min(10, v.skills[loc.skill] + 1);
+    }
+  }
+
+  function removeVillager(id) {
+    state.villagers = state.villagers.filter(v => v.id !== id);
+    if (selectedVillagerId === id) closeVillagerPanel();
+  }
+
+  // ---------- BUILDER JOBS ----------
+  const BUILD_OPTIONS = {
+    hut:      { name: "Build Hut",       woodCost: 15, ticks: 12, effect: () => { state.huts++; } },
+    school:   { name: "Build School Circle", woodCost: 25, ticks: 18, effect: () => { state.buildings.school = true; LOCATIONS.school.built = true; } },
+    nursery:  { name: "Build Nursery Grove", woodCost: 20, ticks: 15, effect: () => { state.buildings.nursery = true; LOCATIONS.nursery.built = true; } },
+  };
+
+  function startBuilderJob(type) {
+    const opt = BUILD_OPTIONS[type];
+    if (!opt || state.builderJob) return;
+    if (state.resources.wood < opt.woodCost) { log("Not enough wood."); return; }
+    state.resources.wood -= opt.woodCost;
+    state.builderJob = { type, remaining: opt.ticks };
+    log("Construction started: " + opt.name);
+  }
+
+  function completeBuilderJob() {
+    const opt = BUILD_OPTIONS[state.builderJob.type];
+    opt.effect();
+    log(opt.name + " complete!");
+    state.builderJob = null;
+    // free the builder
+    const worker = state.villagers.find(v => v.task === "builder");
+    if (worker) assignTask(worker.id, null);
+    drawMap(); // refresh markers in case a new building (school/nursery) just unlocked
+    renderTechAndTaskUI();
+  }
+
+  // ---------- TECH ----------
+  function unlockTech(id) {
+    const t = state.tech.find(t => t.id === id);
+    const def = TECHS.find(t => t.id === id);
+    if (!t || t.done) return;
+    if (state.resources.knowledge < def.cost) return;
+    state.resources.knowledge -= def.cost;
+    t.done = true;
+    log("Discovered: " + def.name);
+    if (id === "family") LOCATIONS.nursery.locked = false;
+    renderTech();
+    if (selectedVillagerId) renderVillagerPanel();
+  }
+
+  // ---------- ASSIGNMENT ----------
+  function assignTask(villagerId, taskId, silent) {
+    const v = state.villagers.find(v => v.id === villagerId);
+    if (!v || v.isChild) return;
+    if (taskId === "builder" && state.villagers.some(x => x.task === "builder" && x.id !== v.id)) {
+      log("Only one villager can build at a time.");
+      return;
+    }
+    if (taskId === "nursery") {
+      const already = state.villagers.filter(x => x.task === "nursery").length;
+      if (already >= 2 && v.task !== "nursery") { log("The nursery only needs two villagers."); return; }
+    }
+    v.task = taskId;
+    v.taskTicks = 0;
+    if (taskId && LOCATIONS[taskId]) {
+      v.x = LOCATIONS[taskId].x + (Math.random() * 30 - 15);
+      v.y = LOCATIONS[taskId].y + (Math.random() * 30 - 15);
+    } else {
+      v.x = 600 + (Math.random() * 100 - 50);
+      v.y = 360 + (Math.random() * 100 - 50);
+    }
+    if (!silent) render();
+  }
+
+  // ---------- RENDERING ----------
+  function render() {
+    document.getElementById("val-food").textContent = Math.floor(state.resources.food);
+    document.getElementById("val-wood").textContent = Math.floor(state.resources.wood);
+    document.getElementById("val-knowledge").textContent = Math.floor(state.resources.knowledge);
+    document.getElementById("val-pop").textContent = state.villagers.length;
+    document.getElementById("val-cap").textContent = popCap();
+    renderVillagers();
+    if (selectedVillagerId) renderVillagerPanel();
+  }
+
+  function renderVillagers() {
+    const layer = document.getElementById("villager-layer");
+    const existingIds = new Set();
+    for (const v of state.villagers) {
+      existingIds.add(v.id);
+      let el = document.getElementById("vil-" + v.id);
+      if (!el) {
+        el = document.createElement("div");
+        el.className = "villager";
+        el.id = "vil-" + v.id;
+        el.innerHTML =
+          '<div class="villager-label"></div>' +
+          '<svg class="villager-svg" viewBox="0 0 40 44">' +
+          '  <ellipse class="villager-shadow" cx="20" cy="40" rx="10" ry="3" fill="rgba(0,0,0,0.28)"/>' +
+          '  <circle class="villager-ring" cx="20" cy="24" r="19" fill="none" stroke="#D8A13A" stroke-width="3"/>' +
+          '  <path class="v-body" d="M9 36 Q9 22 20 22 Q31 22 31 36 Z" fill="#3C6B48"/>' +
+          '  <circle class="v-head" cx="20" cy="14" r="9" fill="#E7B98C"/>' +
+          '  <path class="v-hair" d="M11 12 Q12 4 20 4 Q28 4 29 12 Q24 9 20 9 Q16 9 11 12 Z" fill="#4A3222"/>' +
+          '  <circle cx="16.5" cy="15" r="1.2" fill="#33261C"/><circle cx="23.5" cy="15" r="1.2" fill="#33261C"/>' +
+          '</svg>' +
+          '<div class="need-badge"></div>';
+        el.addEventListener("click", () => selectVillager(v.id));
+        layer.appendChild(el);
+      }
+      el.style.left = (v.x / WORLD_W) * 100 + "%";
+      el.style.top = (v.y / WORLD_H) * 100 + "%";
+      el.classList.toggle("selected", v.id === selectedVillagerId);
+      el.querySelector(".villager-label").textContent = v.name + (v.isChild ? " (child)" : "");
+      const badge = el.querySelector(".need-badge");
+      badge.textContent = v.health < 35 ? "❤️‍🩹" : (v.hunger < 25 ? "🍽️" : (v.energy < 25 ? "💤" : ""));
+      el.querySelector(".v-body").setAttribute("fill", v.isChild ? "#8FAE7A" : bodyColorFor(v));
+      el.style.opacity = v.isChild ? "0.92" : "1";
+      el.style.width = v.isChild ? "26px" : "38px";
+      el.style.height = v.isChild ? "29px" : "42px";
+    }
+    // remove departed villagers
+    layer.querySelectorAll(".villager").forEach(el => {
+      const id = el.id.replace("vil-", "");
+      if (!existingIds.has(id)) el.remove();
+    });
+  }
+
+  function bodyColorFor(v) {
+    const palette = ["#3C6B48", "#6B4A34", "#B8542E", "#3C5C8C", "#7A4E8C", "#8C7A2E"];
+    let hash = 0;
+    for (let i = 0; i < v.id.length; i++) hash = (hash * 31 + v.id.charCodeAt(i)) >>> 0;
+    return palette[hash % palette.length];
+  }
+
+  function selectVillager(id) {
+    selectedVillagerId = id;
+    document.getElementById("villager-panel").classList.remove("hidden");
+    renderVillagerPanel();
+    renderVillagers();
+  }
+  function closeVillagerPanel() {
+    selectedVillagerId = null;
+    document.getElementById("villager-panel").classList.add("hidden");
+    renderVillagers();
+  }
+
+  let builderMenuOpen = false;
+
+  function renderVillagerPanel() {
+    const v = state.villagers.find(v => v.id === selectedVillagerId);
+    if (!v) { closeVillagerPanel(); return; }
+    document.getElementById("vp-name").textContent = v.name + (v.isChild ? " · child" : "");
+
+    document.getElementById("vp-needs").innerHTML = ["hunger", "energy", "health"].map(k => (
+      '<div class="need"><div class="need-label">' + k[0].toUpperCase() + k.slice(1) + '</div>' +
+      '<div class="need-bar"><div class="need-fill ' + k + '" style="width:' + Math.round(v[k]) + '%"></div></div></div>'
+    )).join("");
+
+    document.getElementById("vp-skills").innerHTML = v.isChild ? "<span class='skill-chip'>Still growing up</span>" :
+      Object.entries(v.skills).map(([k, val]) =>
+        '<span class="skill-chip">' + k[0].toUpperCase() + k.slice(1) + ' Lv.' + val + '</span>'
+      ).join("");
+
+    const list = document.getElementById("vp-task-list");
+    if (v.isChild) {
+      builderMenuOpen = false;
+      list.innerHTML = "<div class='vp-hint'>Children can't work yet — they're growing up.</div>";
+      return;
+    }
+
+    if (builderMenuOpen) {
+      renderBuilderMenu(v);
+      return;
+    }
+
+    const options = [];
+    options.push({ id: null, name: "Idle / Wander", icon: "🚶", sub: "" });
+    options.push({ id: "farm", name: "Farm Plot", icon: "🌾", sub: "gather food" });
+    options.push({ id: "forest", name: "Forest Edge", icon: "🌳", sub: "gather wood" });
+    options.push({ id: "rest", name: "Hammocks", icon: "🛌", sub: "restore energy" });
+    options.push({ id: "builder", name: "Builder's Yard", icon: "🔨", sub: state.builderJob ? "job in progress" : "construct buildings" });
+    if (LOCATIONS.school.built) options.push({ id: "school", name: "School Circle", icon: "📚", sub: "generate knowledge" });
+    if (LOCATIONS.nursery.built) options.push({ id: "nursery", name: "Nursery Grove", icon: "🌺", sub: "raise a family" });
+
+    list.innerHTML = options.map(o => {
+      const active = v.task === o.id;
+      return '<button class="task-btn" data-task="' + (o.id || "") + '" style="' + (active ? "border-color:var(--ochre);background:var(--sand)" : "") + '">' +
+        '<span class="task-icon">' + o.icon + '</span><span>' + o.name + '</span><span class="task-sub">' + o.sub + (active ? " · active" : "") + '</span></button>';
+    }).join("");
+
+    list.querySelectorAll(".task-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const t = btn.getAttribute("data-task") || null;
+        if (t === "builder") {
+          if (state.builderJob) { assignTask(v.id, "builder"); renderVillagerPanel(); return; }
+          builderMenuOpen = true;
+          renderVillagerPanel();
+          return;
+        }
+        assignTask(v.id, t);
+        renderVillagerPanel();
+      });
+    });
+  }
+
+  function renderBuilderMenu(v) {
+    const list = document.getElementById("vp-task-list");
+    const opts = [];
+    opts.push({ type: "hut", name: "Build Hut", sub: "+housing · 15 🪵", icon: "🏠" });
+    if (!state.buildings.school) opts.push({ type: "school", name: "Build School Circle", sub: "unlocks knowledge · 25 🪵", icon: "📚" });
+    if (!state.buildings.nursery && isTechDone("family")) opts.push({ type: "nursery", name: "Build Nursery Grove", sub: "unlocks breeding · 20 🪵", icon: "🌺" });
+
+    list.innerHTML =
+      '<button class="task-btn" data-back="1"><span class="task-icon">←</span><span>Back</span></button>' +
+      opts.map(o => {
+        const affordable = state.resources.wood >= BUILD_OPTIONS[o.type].woodCost;
+        return '<button class="task-btn ' + (affordable ? "" : "disabled") + '" data-build="' + o.type + '">' +
+          '<span class="task-icon">' + o.icon + '</span><span>' + o.name + '</span><span class="task-sub">' + o.sub + '</span></button>';
+      }).join("");
+
+    list.querySelector("[data-back]").addEventListener("click", () => { builderMenuOpen = false; renderVillagerPanel(); });
+    list.querySelectorAll("[data-build]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const type = btn.getAttribute("data-build");
+        assignTask(v.id, "builder");
+        startBuilderJob(type);
+        builderMenuOpen = false;
+        renderVillagerPanel();
+      });
+    });
+  }
+
+  function renderTech() {
+    const box = document.getElementById("tech-list");
+    box.innerHTML = TECHS.map(def => {
+      const t = state.tech.find(t => t.id === def.id);
+      const affordable = !t.done && state.resources.knowledge >= def.cost;
+      return '<div class="tech-item ' + (t.done ? "done" : "") + '">' +
+        '<div class="tech-top"><span class="tech-name">' + def.name + '</span><span class="tech-cost">' + def.cost + ' 📜</span></div>' +
+        '<div class="tech-desc">' + def.desc + '</div>' +
+        '<button class="tech-btn ' + (t.done || !affordable ? "disabled" : "") + '" data-tech="' + def.id + '">' +
+        (t.done ? "Learned" : "Research") + '</button></div>';
+    }).join("");
+    box.querySelectorAll("[data-tech]").forEach(btn => {
+      btn.addEventListener("click", () => { unlockTech(btn.getAttribute("data-tech")); });
+    });
+  }
+
+  function renderTechAndTaskUI() {
+    renderTech();
+    if (selectedVillagerId) renderVillagerPanel();
+  }
+
+  // ---------- MAP (static SVG scenery, drawn once) ----------
+  function buildingArt(key, loc) {
+    // Small hand-built SVG illustrations per building type (no emoji, no external art).
+    switch (key) {
+      case "farm":
+        return '<ellipse cx="0" cy="30" rx="46" ry="16" fill="#8C7A47" opacity="0.35"/>' +
+          '<rect x="-40" y="-6" width="80" height="30" rx="4" fill="#C9A24B"/>' +
+          '<path d="M-34 -6 L-34 24 M-18 -6 L-18 24 M-2 -6 L-2 24 M14 -6 L14 24 M30 -6 L30 24" stroke="#8C6A2B" stroke-width="3"/>' +
+          '<path d="M-40 -6 Q0 -18 40 -6" fill="none" stroke="#5C7A3A" stroke-width="6" stroke-linecap="round"/>' +
+          '<circle cx="-30" cy="-10" r="6" fill="#7BA84E"/><circle cx="-10" cy="-14" r="6" fill="#7BA84E"/>' +
+          '<circle cx="12" cy="-13" r="6" fill="#7BA84E"/><circle cx="30" cy="-9" r="6" fill="#7BA84E"/>';
+      case "forest":
+        return '<ellipse cx="0" cy="34" rx="50" ry="14" fill="#123" opacity="0.15"/>' +
+          palmTree(-26, 10, 1.1) + palmTree(0, 22, 0.9) + palmTree(26, 6, 1.2);
+      case "builder":
+        return '<ellipse cx="0" cy="32" rx="48" ry="15" fill="#4a3620" opacity="0.3"/>' +
+          '<rect x="-38" y="6" width="76" height="10" rx="3" fill="#8B5A2B"/>' +
+          '<rect x="-34" y="-6" width="68" height="10" rx="3" fill="#A06B34"/>' +
+          '<rect x="-30" y="-18" width="60" height="10" rx="3" fill="#8B5A2B"/>' +
+          '<rect x="20" y="-34" width="6" height="60" fill="#5C4126"/>' +
+          '<path d="M8 -34 L32 -34 L20 -46 Z" fill="#C1502E"/>';
+      case "school":
+        return '<ellipse cx="0" cy="30" rx="48" ry="14" fill="#123" opacity="0.15"/>' +
+          '<circle cx="-24" cy="14" r="9" fill="#B9AC8A"/><circle cx="0" cy="18" r="9" fill="#B9AC8A"/><circle cx="24" cy="14" r="9" fill="#B9AC8A"/>' +
+          '<path d="M-30 0 L0 -22 L30 0 Z" fill="#2C6E6B"/>' +
+          '<rect x="-22" y="-2" width="44" height="18" fill="#3C8C86"/>' +
+          '<rect x="-6" y="4" width="12" height="12" fill="#1F5B58"/>';
+      case "nursery":
+        return '<ellipse cx="0" cy="30" rx="48" ry="14" fill="#123" opacity="0.12"/>' +
+          flower(-26, 10, "#E06A8B") + flower(0, -2, "#F2B33D") + flower(26, 12, "#E06A8B") +
+          '<ellipse cx="0" cy="20" rx="34" ry="10" fill="#7BA84E"/>';
+      case "rest":
+        return '<ellipse cx="0" cy="32" rx="50" ry="14" fill="#123" opacity="0.15"/>' +
+          palmTree(-34, -20, 0.8) + palmTree(34, -20, 0.8) +
+          '<path d="M-30 -6 Q0 22 30 -6" fill="none" stroke="#C9A24B" stroke-width="5"/>' +
+          '<path d="M-30 -6 Q0 16 30 -6" fill="none" stroke="#E7C878" stroke-width="3"/>';
+      default:
+        return '<circle r="30" fill="#fff" opacity="0.2"/>';
+    }
+  }
+
+  function palmTree(dx, dy, scale) {
+    return '<g transform="translate(' + dx + ',' + dy + ') scale(' + scale + ')">' +
+      '<path d="M0 30 Q-4 0 2 -28" fill="none" stroke="#7A5A34" stroke-width="6" stroke-linecap="round"/>' +
+      '<g fill="#4E7A3C">' +
+      '<path d="M2 -28 Q-26 -34 -34 -14 Q-8 -20 2 -28"/>' +
+      '<path d="M2 -28 Q30 -34 38 -14 Q10 -20 2 -28"/>' +
+      '<path d="M2 -28 Q-16 -46 -6 -58 Q4 -40 2 -28"/>' +
+      '<path d="M2 -28 Q20 -46 12 -58 Q0 -40 2 -28"/>' +
+      '<path d="M2 -28 Q2 -50 2 -60 Q6 -44 2 -28"/>' +
+      '</g></g>';
+  }
+
+  function flower(dx, dy, color) {
+    return '<g transform="translate(' + dx + ',' + dy + ')">' +
+      '<circle cx="-6" cy="-4" r="5" fill="' + color + '"/><circle cx="6" cy="-4" r="5" fill="' + color + '"/>' +
+      '<circle cx="-6" cy="6" r="5" fill="' + color + '"/><circle cx="6" cy="6" r="5" fill="' + color + '"/>' +
+      '<circle cx="0" cy="0" r="5" fill="#F7E7A0"/></g>';
+  }
+
+  function drawMap() {
+    const svg = document.getElementById("village-svg");
+    let markers = "";
+    for (const key in LOCATIONS) {
+      const loc = LOCATIONS[key];
+      if (key === "school" && !LOCATIONS.school.built) continue;
+      if (key === "nursery" && !LOCATIONS.nursery.built) continue;
+      markers += '<g class="building-marker" data-loc="' + key + '" transform="translate(' + loc.x + ',' + loc.y + ')">' +
+        buildingArt(key, loc) +
+        '<text x="0" y="66" font-family="Nunito, sans-serif" font-size="17" font-weight="800" fill="#FBF6E8" text-anchor="middle" style="paint-order:stroke; stroke:#14271f; stroke-width:4px">' + loc.name + '</text>' +
+        '</g>';
+    }
+
+    // Decorative scenery that never receives clicks (rocks, extra palms, reeds)
+    const deco =
+      palmAt(120, 640) + palmAt(1100, 90) + palmAt(90, 120) + palmAt(1140, 400) +
+      rockCluster(760, 260) + rockCluster(200, 300) + reeds(500, 130) + reeds(870, 700);
+
+    svg.innerHTML =
+      '<defs>' +
+      '  <radialGradient id="waterGrad" cx="50%" cy="35%" r="80%">' +
+      '    <stop offset="0%" stop-color="#4FA6A0"/><stop offset="60%" stop-color="#2C6E6B"/><stop offset="100%" stop-color="#184744"/>' +
+      '  </radialGradient>' +
+      '  <radialGradient id="landGrad" cx="46%" cy="40%" r="65%">' +
+      '    <stop offset="0%" stop-color="#DCC98F"/><stop offset="55%" stop-color="#C9B074"/><stop offset="100%" stop-color="#A88F55"/>' +
+      '  </radialGradient>' +
+      '  <radialGradient id="grassGrad" cx="50%" cy="40%" r="70%">' +
+      '    <stop offset="0%" stop-color="#8FAE5C"/><stop offset="100%" stop-color="#6B8F42"/>' +
+      '  </radialGradient>' +
+      '</defs>' +
+      '<rect width="' + WORLD_W + '" height="' + WORLD_H + '" fill="url(#waterGrad)"/>' +
+      waveLines() +
+      '<ellipse cx="' + (WORLD_W/2) + '" cy="' + (WORLD_H/2+30) + '" rx="' + (WORLD_W*0.46) + '" ry="' + (WORLD_H*0.44) + '" fill="url(#landGrad)"/>' +
+      '<ellipse cx="' + (WORLD_W/2) + '" cy="' + (WORLD_H/2+10) + '" rx="' + (WORLD_W*0.36) + '" ry="' + (WORLD_H*0.33) + '" fill="url(#grassGrad)"/>' +
+      deco +
+      markers;
+
+    svg.querySelectorAll(".building-marker").forEach(g => {
+      g.addEventListener("click", () => {
+        if (!selectedVillagerId) { log("Select a villager first, then tap a location."); return; }
+        const loc = g.getAttribute("data-loc");
+        document.getElementById("villager-panel").classList.remove("hidden");
+        if (loc === "builder") {
+          if (state.builderJob) { assignTask(selectedVillagerId, "builder"); }
+          else { builderMenuOpen = true; }
+        } else {
+          assignTask(selectedVillagerId, loc);
+        }
+        renderVillagerPanel();
+      });
+    });
+  }
+
+  function palmAt(x, y) {
+    return '<g transform="translate(' + x + ',' + y + ')">' + palmTree(0, 0, 1) + '</g>';
+  }
+  function rockCluster(x, y) {
+    return '<g transform="translate(' + x + ',' + y + ')" opacity="0.85">' +
+      '<ellipse cx="0" cy="10" rx="22" ry="10" fill="#8A8578"/>' +
+      '<ellipse cx="16" cy="14" rx="14" ry="7" fill="#75705F"/>' +
+      '<ellipse cx="-14" cy="14" rx="10" ry="6" fill="#9C9686"/></g>';
+  }
+  function reeds(x, y) {
+    let paths = "";
+    for (let i = 0; i < 5; i++) {
+      const dx = i * 7 - 14;
+      paths += '<path d="M' + dx + ' 20 Q' + (dx + 4) + ' -6 ' + (dx + 2) + ' -22" stroke="#6B8F42" stroke-width="3" fill="none" stroke-linecap="round"/>';
+    }
+    return '<g transform="translate(' + x + ',' + y + ')">' + paths + '</g>';
+  }
+  function waveLines() {
+    let s = "";
+    for (let i = 0; i < 5; i++) {
+      const y = 40 + i * 130;
+      s += '<path d="M0 ' + y + ' Q ' + (WORLD_W*0.1) + ' ' + (y-10) + ', ' + (WORLD_W*0.2) + ' ' + y +
+        ' T ' + (WORLD_W*0.4) + ' ' + y + ' T ' + (WORLD_W*0.6) + ' ' + y + ' T ' + (WORLD_W*0.8) + ' ' + y +
+        ' T ' + WORLD_W + ' ' + y + '" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="3"/>';
+    }
+    return s;
+  }
+
+  function runCheat(type) {
+    switch (type) {
+      case "food500": state.resources.food += 500; log("✨ +500 food"); break;
+      case "wood500": state.resources.wood += 500; log("✨ +500 wood"); break;
+      case "know500": state.resources.knowledge += 500; log("✨ +500 knowledge"); break;
+      case "hut": state.huts += 1; log("✨ +1 hut"); break;
+      case "finishbuild":
+        if (state.builderJob) { completeBuilderJob(); }
+        else { log("No build in progress."); }
+        break;
+      case "alltech":
+        for (const t of state.tech) t.done = true;
+        renderTech();
+        log("✨ all tech unlocked");
+        break;
+      case "healall":
+        for (const v of state.villagers) { v.health = 100; v.hunger = 100; v.energy = 100; }
+        log("✨ everyone fully healed and fed");
+        break;
+    }
+    render();
+  }
+
+  // ---------- SAVE / LOAD ----------
+  function saveState(silent) {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      if (!silent) log("Progress saved.");
+    } catch (e) { if (!silent) log("Could not save: storage unavailable."); }
+  }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) { return null; }
+  }
+
+  function exportSave() {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "isle-tribe-save.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function importSaveFromFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const data = JSON.parse(reader.result);
+        if (!data.resources || !Array.isArray(data.villagers)) throw new Error("bad shape");
+        state = data;
+        LOCATIONS.school.built = !!(state.buildings && state.buildings.school);
+        LOCATIONS.nursery.built = !!(state.buildings && state.buildings.nursery);
+        drawMap();
+        renderTech();
+        closeVillagerPanel();
+        render();
+        log("Save file imported.");
+      } catch (e) {
+        log("That file couldn't be read as an Isle Tribe save.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  // ---------- UI WIRING ----------
+  function wireUI() {
+    document.getElementById("btn-tech").addEventListener("click", () => {
+      renderTech();
+      document.getElementById("modal-tech").classList.remove("hidden");
+    });
+    document.getElementById("btn-menu").addEventListener("click", () => {
+      document.getElementById("modal-menu").classList.remove("hidden");
+    });
+    document.querySelectorAll(".modal-close").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.getElementById(btn.getAttribute("data-modal")).classList.add("hidden");
+      });
+    });
+    document.getElementById("vp-close").addEventListener("click", closeVillagerPanel);
+    document.getElementById("btn-save").addEventListener("click", () => saveState(false));
+    document.getElementById("btn-export").addEventListener("click", exportSave);
+    document.getElementById("btn-import").addEventListener("click", () => document.getElementById("file-import").click());
+    document.getElementById("file-import").addEventListener("change", (e) => {
+      if (e.target.files[0]) importSaveFromFile(e.target.files[0]);
+      e.target.value = "";
+    });
+
+    // ---- Hidden cheat gesture ----
+    // Tap the population counter 7 times within 3 seconds to open the
+    // Founder's Console. No button or hint anywhere in the UI points to it.
+    let cheatTaps = [];
+    const popEl = document.querySelector('.resource[data-res="pop"]');
+    if (popEl) {
+      popEl.addEventListener("click", () => {
+        const now = Date.now();
+        cheatTaps.push(now);
+        cheatTaps = cheatTaps.filter(t => now - t < 3000);
+        if (cheatTaps.length >= 7) {
+          cheatTaps = [];
+          document.getElementById("modal-cheat").classList.remove("hidden");
+        }
+      });
+    }
+    document.querySelectorAll("[data-cheat]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        runCheat(btn.getAttribute("data-cheat"));
+      });
+    });
+
+    document.getElementById("btn-reset").addEventListener("click", () => {
+      if (confirm("Start a brand new tribe? This erases current progress.")) {
+        state = freshState();
+        LOCATIONS.school.built = false;
+        LOCATIONS.nursery.built = false;
+        selectedVillagerId = null;
+        drawMap();
+        renderTech();
+        closeVillagerPanel();
+        render();
+        document.getElementById("modal-menu").classList.add("hidden");
+      }
+    });
+    document.getElementById("btn-start").addEventListener("click", () => {
+      document.getElementById("modal-welcome").classList.add("hidden");
+    });
+    // tapping empty village background closes the panel
+    document.getElementById("village").addEventListener("click", (e) => {
+      if (e.target.id === "village" || e.target.id === "village-svg") closeVillagerPanel();
+    });
+  }
+
+  // ---------- INIT ----------
+  function init() {
+    const existing = loadState();
+    state = existing || freshState();
+    LOCATIONS.school.built = !!(state.buildings && state.buildings.school);
+    LOCATIONS.nursery.built = !!(state.buildings && state.buildings.nursery);
+    if (existing) document.getElementById("modal-welcome").classList.add("hidden");
+    wireUI();
+    drawMap();
+    renderTech();
+    render();
+    tickHandle = setInterval(tick, TICK_MS);
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
+})();
+
+</script>
+</body>
+</html>
